@@ -3,84 +3,395 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>友人限定サイト</title>
+  <title>友人限定 学習クイズサイト</title>
   <style>
     body {
-      font-family: sans-serif;
-      background-color: #f4f4f9;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      background-color: #f0f4f8;
+      color: #333;
+      margin: 0;
+      padding: 20px;
       display: flex;
       justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
     }
-    .box {
+    .container {
       background: white;
-      padding: 30px;
+      padding: 25px;
       border-radius: 12px;
       box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-      text-align: center;
-      max-width: 400px;
-      width: 90%;
+      width: 100%;
+      max-width: 600px;
+      box-sizing: border-box;
     }
-    input {
-      padding: 10px;
-      font-size: 16px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      width: 80%;
-      margin-bottom: 15px;
-    }
-    button {
-      padding: 10px 20px;
-      font-size: 16px;
-      background-color: #007bff;
+    h1, h2, h3 { text-align: center; color: #2c3e50; }
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 12px;
+      margin: 8px 0;
+      background-color: #3498db;
       color: white;
       border: none;
       border-radius: 6px;
+      font-size: 16px;
       cursor: pointer;
+      transition: background 0.2s;
     }
-    button:hover {
-      background-color: #0056b3;
+    .btn:hover { background-color: #2980b9; }
+    .btn-admin { background-color: #e74c3c; }
+    .btn-admin:hover { background-color: #c0392b; }
+    .btn-secondary { background-color: #7f8c8d; }
+    .btn-secondary:hover { background-color: #95a5a6; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    input[type="text"], input[type="password"], input[type="number"], select, textarea {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      box-sizing: border-box;
     }
-    #secret-content {
-      display: none;
-    }
+    .screen { display: none; }
+    .active { display: block; }
+    .timer { font-size: 20px; font-weight: bold; color: #e74c3c; text-align: center; margin: 10px 0; }
+    .q-box { background: #eef2f7; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+    .list-item { background: #f8f9fa; padding: 10px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 8px; position: relative; }
+    .del-btn { position: absolute; right: 10px; top: 10px; background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
   </style>
 </head>
 <body>
 
-  <!-- パスワード入力画面 -->
-  <div id="login-box" class="box">
-    <h2>鍵付きページ</h2>
-    <p>パスワードを入力してください</p>
-    <input type="password" id="password-input" placeholder="パスワード">
-    <br>
-    <button onclick="checkPassword()">入室する</button>
-    <p id="error-message" style="color: red; display: none;">合言葉が違います</p>
+<div class="container">
+
+  <!-- 1. サイト全体のパスワード入力画面 -->
+  <div id="screen-login" class="screen active">
+    <h2>鍵付き学習サイト</h2>
+    <p style="text-align:center;">パスワードを入力してください</p>
+    <input type="password" id="site-password" placeholder="パスワード">
+    <button class="btn" onclick="checkSitePassword()">入室する</button>
+    <p id="site-pw-error" style="color:red; display:none; text-align:center;">パスワードが違います</p>
   </div>
 
-  <!-- ログイン後に表示されるメインコンテンツ -->
-  <div id="secret-content" class="box">
-    <h1>ようこそ！</h1>
-    <p>ここが友達限定の秘密ページです。</p>
-    <p>ここに好きなメッセージやコンテンツを載せていきましょう！</p>
+  <!-- 2. ホーム画面 -->
+  <div id="screen-home" class="screen">
+    <h2>ホーム画面</h2>
+    <button class="btn" onclick="startQuiz('random')" style="background-color:#2ecc71;">🎲 ランダム出題 (10問)</button>
+    <div class="grid">
+      <button class="btn" onclick="startQuiz('国語')">国語</button>
+      <button class="btn" onclick="startQuiz('数学')">数学</button>
+      <button class="btn" onclick="startQuiz('理科')">理科</button>
+      <button class="btn" onclick="startQuiz('社会')">社会</button>
+      <button class="btn" onclick="startQuiz('英語')">英語</button>
+      <button class="btn" onclick="startQuiz('音楽')">音楽</button>
+      <button class="btn" onclick="startQuiz('保健体育')">保健体育</button>
+      <button class="btn" onclick="startQuiz('技術')">技術</button>
+      <button class="btn" onclick="startQuiz('家庭科')">家庭科</button>
+    </div>
+    <hr>
+    <button class="btn btn-secondary" onclick="showScreen('screen-settings')">⚙️ 設定</button>
+    <button class="btn btn-admin" onclick="showScreen('screen-admin-login')">🔒 管理者ページ</button>
   </div>
 
-  <script>
-    function checkPassword() {
-      // ↓ 「1234」の場所を好きな合言葉（パスワード）に変更してください
-      const secretPassword = "1234"; 
+  <!-- 3. 設定画面 -->
+  <div id="screen-settings" class="screen">
+    <h2>タイマー設定 (1~90秒)</h2>
+    <div id="timer-settings-list"></div>
+    <button class="btn" onclick="saveSettings()">設定を保存</button>
+    <button class="btn btn-secondary" onclick="showScreen('screen-home')">ホームへ戻る</button>
+  </div>
 
-      const input = document.getElementById("password-input").value;
-      if (input === secretPassword) {
-        document.getElementById("login-box").style.display = "none";
-        document.getElementById("secret-content").style.display = "block";
-      } else {
-        document.getElementById("error-message").style.display = "block";
+  <!-- 4. 管理者ログイン画面 -->
+  <div id="screen-admin-login" class="screen">
+    <h2>管理者ログイン</h2>
+    <input type="password" id="admin-password" placeholder="管理者パスワード (初期: admin123)">
+    <button class="btn btn-admin" onclick="checkAdminPassword()">ログイン</button>
+    <p id="admin-pw-error" style="color:red; display:none; text-align:center;">パスワードが違います</p>
+    <button class="btn btn-secondary" onclick="showScreen('screen-home')">ホームへ戻る</button>
+  </div>
+
+  <!-- 5. 管理者ダッシュボード -->
+  <div id="screen-admin" class="screen">
+    <h2>管理者ページ</h2>
+    <h3>新しい問題の追加</h3>
+    <select id="new-q-subject">
+      <option value="国語">国語</option>
+      <option value="数学">数学</option>
+      <option value="理科">理科</option>
+      <option value="社会">社会</option>
+      <option value="英語">英語</option>
+      <option value="音楽">音楽</option>
+      <option value="保健体育">保健体育</option>
+      <option value="技術">技術</option>
+      <option value="家庭科">家庭科</option>
+    </select>
+    <textarea id="new-q-text" placeholder="問題文"></textarea>
+    <input type="text" id="new-q-answer" placeholder="正解 (例: 富士山)">
+    <input type="text" id="new-q-alt" placeholder="別解 (カンマ区切りで複数可例: ふじさん, Fujisan)">
+    <button class="btn" onclick="addQuestion()">問題を登録</button>
+
+    <h3>登録済み問題一覧</h3>
+    <div id="admin-questions-list"></div>
+
+    <button class="btn btn-secondary" onclick="showScreen('screen-home')">ホームへ戻る</button>
+  </div>
+
+  <!-- 6. クイズ画面 -->
+  <div id="screen-quiz" class="screen">
+    <div style="display:flex; justify-between; align-items:center;">
+      <span id="quiz-progress" style="font-weight:bold;">第 1 問</span>
+      <span id="quiz-subject-tag" style="background:#ddd; padding:3px 8px; border-radius:4px;"></span>
+    </div>
+    <div class="timer" id="timer-display">残り時間: -- 秒</div>
+    <div class="q-box" id="quiz-question-text">問題文がここに入ります</div>
+    <input type="text" id="quiz-user-input" placeholder="答えを入力してください">
+    <button class="btn" onclick="submitAnswer()">回答する</button>
+  </div>
+
+  <!-- 7. 結果・復習画面 -->
+  <div id="screen-result" class="screen">
+    <h2>結果発表</h2>
+    <div id="result-summary"></div>
+    <div id="result-details"></div>
+    <button id="btn-retry" class="btn" onclick="startRetry()" style="display:none; background-color:#e67e22;">間違えた問題をもう一度解く</button>
+    <button class="btn btn-secondary" onclick="showScreen('screen-home')">ホームへ戻る</button>
+  </div>
+
+</div>
+
+<script>
+  // --- データの初期状態 ---
+  const SITE_PASS = "1234";
+  const ADMIN_PASS = "admin123";
+
+  const subjects = ["国語", "数学", "理科", "社会", "英語", "音楽", "保健体育", "技術", "家庭科"];
+
+  let settingsTimes = JSON.parse(localStorage.getItem('quiz_settings_times')) || {
+    "国語": 10, "数学": 30, "理科": 30, "社会": 10,
+    "英語": 10, "音楽": 10, "保健体育": 10, "技術": 10, "家庭科": 10
+  };
+
+  let questions = JSON.parse(localStorage.getItem('quiz_questions')) || [
+    { id: 1, subject: "数学", text: "1 + 1 = ?", answer: "2", alt: "２" },
+    { id: 2, subject: "国語", text: "「山」の音読みは？", answer: "サン", alt: "さん" }
+  ];
+
+  // --- 画面切り替え関数 ---
+  function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    if(id === 'screen-settings') renderSettings();
+    if(id === 'screen-admin') renderAdminQuestions();
+  }
+
+  // --- パスワード確認 ---
+  function checkSitePassword() {
+    if(document.getElementById('site-password').value === SITE_PASS) {
+      showScreen('screen-home');
+    } else {
+      document.getElementById('site-pw-error').style.display = 'block';
+    }
+  }
+
+  function checkAdminPassword() {
+    if(document.getElementById('admin-password').value === ADMIN_PASS) {
+      showScreen('screen-admin');
+    } else {
+      document.getElementById('admin-pw-error').style.display = 'block';
+    }
+  }
+
+  // --- 設定管理 ---
+  function renderSettings() {
+    const container = document.getElementById('timer-settings-list');
+    container.innerHTML = '';
+    subjects.forEach(sub => {
+      container.innerHTML += `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+          <span>${sub}</span>
+          <input type="number" min="1" max="90" value="${settingsTimes[sub]}" id="setting-${sub}" style="width:80px;"> 秒
+        </div>
+      `;
+    });
+  }
+
+  function saveSettings() {
+    subjects.forEach(sub => {
+      let val = parseInt(document.getElementById(`setting-${sub}`).value);
+      if(val < 1) val = 1;
+      if(val > 90) val = 90;
+      settingsTimes[sub] = val;
+    });
+    localStorage.setItem('quiz_settings_times', JSON.stringify(settingsTimes));
+    alert('設定を保存しました');
+    showScreen('screen-home');
+  }
+
+  // --- 管理者機能（問題の追加・削除） ---
+  function addQuestion() {
+    const sub = document.getElementById('new-q-subject').value;
+    const text = document.getElementById('new-q-text').value.trim();
+    const ans = document.getElementById('new-q-answer').value.trim();
+    const alt = document.getElementById('new-q-alt').value.trim();
+
+    if(!text || !ans) {
+      alert('問題文と答えを入力してください');
+      return;
+    }
+
+    questions.push({ id: Date.now(), subject: sub, text: text, answer: ans, alt: alt });
+    localStorage.setItem('quiz_questions', JSON.stringify(questions));
+    
+    document.getElementById('new-q-text').value = '';
+    document.getElementById('new-q-answer').value = '';
+    document.getElementById('new-q-alt').value = '';
+    
+    renderAdminQuestions();
+    alert('問題を追加しました');
+  }
+
+  function deleteQuestion(id) {
+    questions = questions.filter(q => q.id !== id);
+    localStorage.setItem('quiz_questions', JSON.stringify(questions));
+    renderAdminQuestions();
+  }
+
+  function renderAdminQuestions() {
+    const container = document.getElementById('admin-questions-list');
+    container.innerHTML = '';
+    if(questions.length === 0) {
+      container.innerHTML = '<p>登録されている問題はありません。</p>';
+      return;
+    }
+    questions.forEach(q => {
+      container.innerHTML += `
+        <div class="list-item">
+          <button class="del-btn" onclick="deleteQuestion(${q.id})">削除</button>
+          <strong>[${q.subject}]</strong> ${q.text}<br>
+          <small>正解: ${q.answer} ${q.alt ? '(別解: '+q.alt+')' : ''}</small>
+        </div>
+      `;
+    });
+  }
+
+  // --- クイズロジック ---
+  let activeQuizList = [];
+  let currentQIndex = 0;
+  let wrongQuestions = [];
+  let timerInterval = null;
+  let timeLeft = 0;
+
+  function startQuiz(subject) {
+    let pool = questions;
+    if(subject !== 'random') {
+      pool = questions.filter(q => q.subject === subject);
+    }
+    if(pool.length === 0) {
+      alert('該当する教科の問題がまだ登録されていません。管理者ページから問題を追加してください。');
+      return;
+    }
+
+    // シャッフルして最大10問を取得
+    let shuffled = [...pool].sort(() => 0.5 - Math.random());
+    activeQuizList = shuffled.slice(0, 10);
+    currentQIndex = 0;
+    wrongQuestions = [];
+
+    showScreen('screen-quiz');
+    loadQuestion();
+  }
+
+  function loadQuestion() {
+    clearInterval(timerInterval);
+    const q = activeQuizList[currentQIndex];
+    document.getElementById('quiz-progress').innerText = `第 ${currentQIndex + 1} 問 / ${activeQuizList.length} 問`;
+    document.getElementById('quiz-subject-tag').innerText = q.subject;
+    document.getElementById('quiz-question-text').innerText = q.text;
+    document.getElementById('quiz-user-input').value = '';
+    document.getElementById('quiz-user-input').focus();
+
+    // タイマー設定
+    timeLeft = settingsTimes[q.subject] || 10;
+    updateTimerDisplay();
+
+    timerInterval = setInterval(() => {
+      timeLeft--;
+      updateTimerDisplay();
+      if(timeLeft <= 0) {
+        clearInterval(timerInterval);
+        submitAnswer(true); // 時間切れ回答
+      }
+    }, 1000);
+  }
+
+  function updateTimerDisplay() {
+    document.getElementById('timer-display').innerText = `残り時間: ${timeLeft} 秒`;
+  }
+
+  function submitAnswer(isTimeout = false) {
+    clearInterval(timerInterval);
+    const q = activeQuizList[currentQIndex];
+    const userInput = document.getElementById('quiz-user-input').value.trim().toLowerCase();
+    
+    // 正解・別解の判定
+    let isCorrect = false;
+    if(!isTimeout && userInput !== '') {
+      const answers = [q.answer, ...(q.alt ? q.alt.split(',').map(s=>s.trim()) : [])].map(a => a.toLowerCase());
+      if(answers.includes(userInput)) {
+        isCorrect = true;
       }
     }
-  </script>
+
+    if(!isCorrect) {
+      wrongQuestions.push({ question: q, userAnswer: isTimeout ? '（時間切れ）' : (userInput || '未入力') });
+    }
+
+    currentQIndex++;
+    if(currentQIndex < activeQuizList.length) {
+      loadQuestion();
+    } else {
+      finishQuiz();
+    }
+  }
+
+  function finishQuiz() {
+    showScreen('screen-result');
+    const total = activeQuizList.length;
+    const correctCount = total - wrongQuestions.length;
+
+    document.getElementById('result-summary').innerHTML = `
+      <h3 style="text-align:center;">正解数: ${correctCount} / ${total} 問</h3>
+    `;
+
+    const details = document.getElementById('result-details');
+    details.innerHTML = '';
+
+    if(wrongQuestions.length === 0) {
+      details.innerHTML = '<h3 style="color:#2ecc71; text-align:center;">🎉 パーフェクト！全問正解です！</h3>';
+      document.getElementById('btn-retry').style.display = 'none';
+    } else {
+      details.innerHTML = '<h3>間違えた問題の復習</h3>';
+      wrongQuestions.forEach(w => {
+        details.innerHTML += `
+          <div class="list-item" style="border-left: 5px solid #e74c3c;">
+            <strong>[${w.question.subject}]</strong> ${w.question.text}<br>
+            <span style="color:#e74c3c;">あなたの回答: ${w.userAnswer}</span><br>
+            <span style="color:#2ecc71;">正解: ${w.question.answer} ${w.question.alt ? '(別解: '+w.question.alt+')' : ''}</span>
+          </div>
+        `;
+      });
+      document.getElementById('btn-retry').style.display = 'block';
+    }
+  }
+
+  function startRetry() {
+    // 間違えた問題だけで再挑戦
+    activeQuizList = wrongQuestions.map(w => w.question);
+    currentQIndex = 0;
+    wrongQuestions = [];
+    showScreen('screen-quiz');
+    loadQuestion();
+  }
+</script>
 
 </body>
 </html>
