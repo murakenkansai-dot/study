@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>友人限定 学習クイズサイト</title>
+  <title>期末テスト対策 友人限定クイズサイト</title>
   <style>
     body {
       font-family: 'Helvetica Neue', Arial, sans-serif;
@@ -38,6 +38,11 @@
       transition: background 0.2s;
     }
     .btn:hover { background-color: #2980b9; }
+    .btn:disabled {
+      background-color: #bdc3c7 !important;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
     .btn-admin { background-color: #e74c3c; }
     .btn-admin:hover { background-color: #c0392b; }
     .btn-secondary { background-color: #7f8c8d; }
@@ -65,7 +70,7 @@
 
   <!-- 1. サイト全体のパスワード入力画面 -->
   <div id="screen-login" class="screen active">
-    <h2>鍵付き学習サイト</h2>
+    <h2>期末テスト対策 鍵付きサイト</h2>
     <p style="text-align:center;">パスワードを入力してください</p>
     <input type="password" id="site-password" placeholder="パスワード">
     <button class="btn" onclick="checkSitePassword()">入室する</button>
@@ -75,20 +80,12 @@
   <!-- 2. ホーム画面 -->
   <div id="screen-home" class="screen">
     <h2>ホーム画面</h2>
-    <button class="btn" onclick="startQuiz('random')" style="background-color:#2ecc71;">🎲 ランダム出題 (10問)</button>
-    <div class="grid">
-      <button class="btn" onclick="startQuiz('国語')">国語</button>
-      <button class="btn" onclick="startQuiz('数学')">数学</button>
-      <button class="btn" onclick="startQuiz('理科')">理科</button>
-      <button class="btn" onclick="startQuiz('社会')">社会</button>
-      <button class="btn" onclick="startQuiz('英語')">英語</button>
-      <button class="btn" onclick="startQuiz('音楽')">音楽</button>
-      <button class="btn" onclick="startQuiz('保健体育')">保健体育</button>
-      <button class="btn" onclick="startQuiz('技術')">技術</button>
-      <button class="btn" onclick="startQuiz('家庭科')">家庭科</button>
+    <button class="btn" id="btn-random" onclick="startQuiz('random')" style="background-color:#2ecc71;">🎲 ランダム出題 (10問)</button>
+    <div class="grid" id="subject-buttons-grid">
+      <!-- JavaScriptで動的に教科ボタンを生成し、問題がないものは非活性化します -->
     </div>
     <hr>
-    <button class="btn btn-secondary" onclick="showScreen('screen-settings')">⚙️ 設定</button>
+    <button class="btn btn-secondary" onclick="showScreen('screen-settings')">⚙️ タイマー設定</button>
     <button class="btn btn-admin" onclick="showScreen('screen-admin-login')">🔒 管理者ページ</button>
   </div>
 
@@ -114,19 +111,19 @@
     <h2>管理者ページ</h2>
     <h3>新しい問題の追加</h3>
     <select id="new-q-subject">
-      <option value="国語">国語</option>
-      <option value="数学">数学</option>
-      <option value="理科">理科</option>
       <option value="社会">社会</option>
-      <option value="英語">英語</option>
-      <option value="音楽">音楽</option>
       <option value="保健体育">保健体育</option>
       <option value="技術">技術</option>
       <option value="家庭科">家庭科</option>
+      <option value="国語">国語</option>
+      <option value="数学">数学</option>
+      <option value="理科">理科</option>
+      <option value="英語">英語</option>
+      <option value="音楽">音楽</option>
     </select>
     <textarea id="new-q-text" placeholder="問題文"></textarea>
     <input type="text" id="new-q-answer" placeholder="正解 (例: 富士山)">
-    <input type="text" id="new-q-alt" placeholder="別解 (カンマ区切りで複数可例: ふじさん, Fujisan)">
+    <input type="text" id="new-q-alt" placeholder="別解 (カンマ区切りで複数可 例: ふじさん, Fujisan)">
     <button class="btn" onclick="addQuestion()">問題を登録</button>
 
     <h3>登録済み問題一覧</h3>
@@ -137,7 +134,7 @@
 
   <!-- 6. クイズ画面 -->
   <div id="screen-quiz" class="screen">
-    <div style="display:flex; justify-between; align-items:center;">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
       <span id="quiz-progress" style="font-weight:bold;">第 1 問</span>
       <span id="quiz-subject-tag" style="background:#ddd; padding:3px 8px; border-radius:4px;"></span>
     </div>
@@ -159,7 +156,6 @@
 </div>
 
 <script>
-  // --- データの初期状態 ---
   const SITE_PASS = "1234";
   const ADMIN_PASS = "admin123";
 
@@ -170,17 +166,91 @@
     "英語": 10, "音楽": 10, "保健体育": 10, "技術": 10, "家庭科": 10
   };
 
-  let questions = JSON.parse(localStorage.getItem('quiz_questions')) || [
-    { id: 1, subject: "数学", text: "1 + 1 = ?", answer: "2", alt: "２" },
-    { id: 2, subject: "国語", text: "「山」の音読みは？", answer: "サン", alt: "さん" }
+  // 画像から抽出した初期問題データ（社会、保健体育、技術、家庭科）
+  let defaultQuestions = [
+    // --- 社会 ---
+    { id: 101, subject: "社会", text: "アフリカの熱帯気候は ( ) 部にある。", answer: "北", alt: "きた" },
+    { id: 102, subject: "社会", text: "アフリカのサバナ気候は ( ) 部にあり、とうもろこしが作られる。", answer: "中央", alt: "ちゅうおう" },
+    { id: 103, subject: "社会", text: "アフリカの砂漠気候は主に ( ) にあり、かんがい農業が盛ん。", answer: "北", alt: "きた" },
+    { id: 104, subject: "社会", text: "植民地時代、ヨーロッパ人が経営する大農園を何というか。", answer: "プランテーション", alt: "" },
+    { id: 105, subject: "社会", text: "ナイジェリアなどで価格上昇により経済発展しているものは何？", answer: "鉱資源", alt: "こうしげん" },
+    { id: 106, subject: "社会", text: "特定のものの輸出に経済を頼る課題を何というか。", answer: "モノカルチャー経済", alt: "モノカルチャー" },
+    { id: 107, subject: "社会", text: "アフリカで農村部から都市部に移住する人が増え作られるものは？", answer: "スラム", alt: "" },
+    { id: 108, subject: "社会", text: "植民地時代に作られた、民族の分布を無視した問題は？", answer: "国境", alt: "国境の問題" },
+    { id: 109, subject: "社会", text: "アフリカの経済的・政治的なつながりのために作られた組織(略称AU)は？", answer: "アフリカ連合", alt: "AU" },
+    { id: 110, subject: "社会", text: "北アメリカで起こる熱帯低気圧の名称は？", answer: "ハリケーン", alt: "" },
+    { id: 111, subject: "社会", text: "アメリカの先住民とヨーロッパ系の混血を何というか。", answer: "メスチソ", alt: "" },
+    { id: 112, subject: "社会", text: "一部の州で、缶などを店に返すと現金がもらえる制度を何というか。", answer: "デポジット制", alt: "デポジット" },
+    { id: 113, subject: "社会", text: "ブラジルでコーヒーや大豆の栽培をしている地域は？", answer: "パンパ", alt: "" },
+    { id: 114, subject: "社会", text: "うず巻き状に採掘をすること…", answer: "露天掘り", alt: "ろてんぼり" },
+    { id: 115, subject: "社会", text: "オセアニアの先住民アボリジニが所有している土地は (多い/少ない) ?", answer: "多い", alt: "おおい" },
+
+    // --- 保健体育 ---
+    { id: 201, subject: "保健体育", text: "体の大きさや重さが増すこと…", answer: "発育", alt: "" },
+    { id: 202, subject: "保健体育", text: "身長や体重が急に発育する時期を何というか。", answer: "発育急進期", alt: "" },
+    { id: 203, subject: "保健体育", text: "鼻・肺・喉・気管支などを呼吸器と言い、酸素を取り込み二酸化炭素を排出している。このことを何というか。", answer: "ガス交換", alt: "" },
+    { id: 204, subject: "保健体育", text: "心臓・動脈・静脈・毛細血管などを循環器と言い、血液循環をおこなっている。心臓が発育すると拍出量がどうなるか？", answer: "増大する", alt: "増大" },
+    { id: 205, subject: "保健体育", text: "精巣からは男性ホルモン、卵巣からは何ホルモンが分泌されるか？", answer: "女性ホルモン", alt: "女性" },
+    { id: 206, subject: "保健体育", text: "卵管は、卵巣と子宮の通り道。ここで精子と卵子が出会うことを何というか。", answer: "受精", alt: "" },
+    { id: 207, subject: "保健体育", text: "受精卵が子宮内膜で発育を始め、何が始まるか？", answer: "妊娠", alt: "着床" },
+    { id: 208, subject: "保健体育", text: "脳と体が自律神経やホルモンを通して影響しあうことを何というか。", answer: "心身相関", alt: "" },
+    { id: 209, subject: "保健体育", text: "心や体に負荷がかかるストレスの原因を何というか。", answer: "ストレッサー", alt: "" },
+
+    // --- 技術 ---
+    { id: 301, subject: "技術", text: "木材を切るときに引く線を何というか。", answer: "けがき線", alt: "けがきせん" },
+    { id: 302, subject: "技術", text: "直角を測る定規：直角定規／（順不同）", answer: "さしがね", alt: "差し金" },
+    { id: 303, subject: "技術", text: "釘を打つための穴を開けるのに使う道具：", answer: "四つ目切り", alt: "よつめきり" },
+    { id: 304, subject: "技術", text: "机に切る木材を固定する道具：", answer: "F型クランプ", alt: "エフ型クランプ" },
+    { id: 305, subject: "技術", text: "回転する刃で木材に穴を開ける機械：", answer: "卓上ボール盤", alt: "ボール盤" },
+    { id: 306, subject: "技術", text: "木材を曲線などに切れる機械：", answer: "糸のこ盤", alt: "糸鋸盤" },
+    { id: 307, subject: "技術", text: "釘を打ち付ける道具を何というか。", answer: "げんのう", alt: "ゲンノウ" },
+
+    // --- 家庭科 ---
+    { id: 401, subject: "家庭科", text: "食品を6つのグループに分けたものを何というか。", answer: "六つの食品群", alt: "6つの食品群" },
+    { id: 402, subject: "家庭科", text: "1群の主な成分はタンパク質で、肉や魚、卵などを動物性食品と言い、豆製品などを何というか。", answer: "植物性食品", alt: "" },
+    { id: 403, subject: "家庭科", text: "食品群別摂取量の目安と言い、実際の食品で食べるおおよその量を何というか。", answer: "食品の概量", alt: "概量" },
+    { id: 404, subject: "家庭科", text: "食事の際の料理の組み合わせを何というか。", answer: "献立", alt: "こんだて" },
+    { id: 405, subject: "家庭科", text: "さけのムニエル：バットに並べて魚に塩、こしょうを振っておくことで何が取れるか？", answer: "臭み", alt: "くさみ" }
   ];
+
+  let questions = JSON.parse(localStorage.getItem('quiz_questions')) || defaultQuestions;
 
   // --- 画面切り替え関数 ---
   function showScreen(id) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById(id).classList.add('active');
+    if(id === 'screen-home') renderHome();
     if(id === 'screen-settings') renderSettings();
     if(id === 'screen-admin') renderAdminQuestions();
+  }
+
+  // --- ホーム画面の描画（問題がない教科のボタンを無効化） ---
+  function renderHome() {
+    const grid = document.getElementById('subject-buttons-grid');
+    grid.innerHTML = '';
+
+    let totalAvailableQuestions = 0;
+
+    subjects.forEach(sub => {
+      const count = questions.filter(q => q.subject === sub).length;
+      totalAvailableQuestions += count;
+      const isDisabled = count === 0 ? 'disabled' : '';
+      const buttonText = count === 0 ? `${sub} (問題なし)` : `${sub} (${count}問)`;
+
+      grid.innerHTML += `
+        <button class="btn" ${isDisabled} onclick="startQuiz('${sub}')">${buttonText}</button>
+      `;
+    });
+
+    // ランダム出題ボタンも問題がゼロなら無効化
+    const randomBtn = document.getElementById('btn-random');
+    if(totalAvailableQuestions === 0) {
+      randomBtn.disabled = true;
+      randomBtn.innerText = "🎲 ランダム出題 (問題なし)";
+    } else {
+      randomBtn.disabled = false;
+      randomBtn.innerText = "🎲 ランダム出題 (10問)";
+    }
   }
 
   // --- パスワード確認 ---
@@ -208,7 +278,7 @@
       container.innerHTML += `
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
           <span>${sub}</span>
-          <input type="number" min="1" max="90" value="${settingsTimes[sub]}" id="setting-${sub}" style="width:80px;"> 秒
+          <input type="number" min="1" max="90" value="${settingsTimes[sub] || 10}" id="setting-${sub}" style="width:80px;"> 秒
         </div>
       `;
     });
@@ -226,7 +296,7 @@
     showScreen('screen-home');
   }
 
-  // --- 管理者機能（問題の追加・削除） ---
+  // --- 管理者機能 ---
   function addQuestion() {
     const sub = document.getElementById('new-q-subject').value;
     const text = document.getElementById('new-q-text').value.trim();
@@ -286,11 +356,10 @@
       pool = questions.filter(q => q.subject === subject);
     }
     if(pool.length === 0) {
-      alert('該当する教科の問題がまだ登録されていません。管理者ページから問題を追加してください。');
+      alert('この教科にはまだ問題が登録されていません。');
       return;
     }
 
-    // シャッフルして最大10問を取得
     let shuffled = [...pool].sort(() => 0.5 - Math.random());
     activeQuizList = shuffled.slice(0, 10);
     currentQIndex = 0;
@@ -309,8 +378,11 @@
     document.getElementById('quiz-user-input').value = '';
     document.getElementById('quiz-user-input').focus();
 
-    // タイマー設定
-    timeLeft = settingsTimes[q.subject] || 10;
+    // 数学・理科はデフォルト30秒、それ以外は10秒（設定に準拠）
+    if(settingsTimes[q.subject] === undefined) {
+      settingsTimes[q.subject] = (q.subject === '数学' || q.subject === '理科') ? 30 : 10;
+    }
+    timeLeft = settingsTimes[q.subject];
     updateTimerDisplay();
 
     timerInterval = setInterval(() => {
@@ -318,7 +390,7 @@
       updateTimerDisplay();
       if(timeLeft <= 0) {
         clearInterval(timerInterval);
-        submitAnswer(true); // 時間切れ回答
+        submitAnswer(true);
       }
     }, 1000);
   }
@@ -332,7 +404,6 @@
     const q = activeQuizList[currentQIndex];
     const userInput = document.getElementById('quiz-user-input').value.trim().toLowerCase();
     
-    // 正解・別解の判定
     let isCorrect = false;
     if(!isTimeout && userInput !== '') {
       const answers = [q.answer, ...(q.alt ? q.alt.split(',').map(s=>s.trim()) : [])].map(a => a.toLowerCase());
@@ -384,7 +455,6 @@
   }
 
   function startRetry() {
-    // 間違えた問題だけで再挑戦
     activeQuizList = wrongQuestions.map(w => w.question);
     currentQIndex = 0;
     wrongQuestions = [];
